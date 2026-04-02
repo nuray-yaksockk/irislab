@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IrisID Lab — Биометрическая идентификация</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --p1: #f6a87c; --p2: #e05878; --lav: #c4b5e8; --navy: #2b3260;
+  --green: #52c48a; --red: #e05878;
+  --glass: rgba(255,255,255,0.54); --border: rgba(255,255,255,0.74);
+  --shadow: 0 12px 48px rgba(80,60,160,0.13);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Nunito',sans-serif;
+  min-height:100vh;
+  background:linear-gradient(140deg,#f8be9c 0%,#edcae6 33%,#c8c1ef 65%,#b5d5f2 100%);
+  overflow-x:hidden;
+}
+.blob{position:fixed;border-radius:50%;filter:blur(72px);opacity:.45;pointer-events:none;z-index:0;}
+.b1{width:520px;height:520px;background:radial-gradient(#f9a87c,#e87aaa);top:-130px;left:-110px;animation:b1 9s ease-in-out infinite alternate;}
+.b2{width:440px;height:440px;background:radial-gradient(#b0a2ee,#80c8f5);bottom:-100px;right:-80px;animation:b2 11s ease-in-out infinite alternate;}
+@keyframes b1{to{transform:translate(55px,35px) scale(1.08);}}
+@keyframes b2{to{transform:translate(-40px,-55px) scale(.93);}}
+
+.wrap{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:20px;}
+
+/* ── HEADER ── */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--glass);backdrop-filter:blur(24px);
+  border:1.5px solid var(--border);border-radius:22px;
+  padding:14px 26px;margin-bottom:20px;
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.8);
+}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:var(--navy);}
+.logo-ic{width:36px;height:36px;background:linear-gradient(135deg,var(--p1),var(--p2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 14px rgba(224,88,120,.3);}
+.tabs{display:flex;background:rgba(255,255,255,.35);border-radius:14px;padding:4px;gap:2px;}
+.tab{padding:8px 20px;border:none;background:transparent;border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--navy);opacity:.6;transition:all .2s;}
+.tab.on{background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;opacity:1;box-shadow:0 4px 12px rgba(224,88,120,.3);}
+.hstats{display:flex;gap:10px;align-items:center;}
+.hpill{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.7);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--navy);}
+.dot{width:8px;height:8px;border-radius:50%;}
+.dg{background:var(--green);box-shadow:0 0 6px rgba(82,196,138,.5);}
+.dr{background:var(--red);}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:220px 1fr;gap:20px;}
+@media(max-width:760px){.layout{grid-template-columns:1fr;}.sidebar{display:none;}}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  background:var(--glass);backdrop-filter:blur(24px);
+  border:1.5px solid var(--border);border-radius:22px;
+  padding:22px 16px;height:fit-content;position:sticky;top:20px;
+  box-shadow:var(--shadow);
+}
+.av{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--p1),var(--p2));margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.av-name{text-align:center;font-weight:700;font-size:14px;color:var(--navy);margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(155,124,182,.2);}
+.nav{list-style:none;display:flex;flex-direction:column;gap:6px;}
+.nlink{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;border:none;background:transparent;width:100%;font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;color:var(--navy);cursor:pointer;transition:all .2s;opacity:.65;}
+.nlink:hover,.nlink.on{background:rgba(155,124,182,.15);opacity:1;color:var(--p2);}
+.progress-mini{margin-top:22px;padding-top:16px;border-top:1px solid rgba(155,124,182,.15);}
+.pm-label{font-size:11px;font-weight:700;color:var(--navy);opacity:.55;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.pm-track{height:6px;background:rgba(255,255,255,.45);border-radius:4px;overflow:hidden;margin-bottom:6px;}
+.pm-fill{height:100%;background:linear-gradient(90deg,var(--p1),var(--p2));border-radius:4px;transition:width .5s;}
+.pm-count{font-size:12px;font-weight:700;color:var(--navy);opacity:.7;}
+
+/* ── CARD BASE ── */
+.card{
+  background:var(--glass);backdrop-filter:blur(24px);
+  border:1.5px solid var(--border);border-radius:24px;
+  padding:26px;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.8);
+}
+
+/* ── QUIZ SECTION ── */
+#quizSection{display:flex;flex-direction:column;gap:18px;}
+.qhdr{display:flex;justify-content:space-between;align-items:center;}
+.qtitle{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--navy);}
+.qbadge{background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;box-shadow:0 4px 12px rgba(224,88,120,.28);}
+
+/* TARGET ZONE */
+.target-zone{
+  background:linear-gradient(135deg,rgba(246,168,124,.1),rgba(196,181,232,.12));
+  border:1.5px solid rgba(196,181,232,.35);
+  border-radius:18px;padding:22px;
+  display:flex;align-items:center;gap:24px;
+}
+.target-photo-wrap{position:relative;flex:0 0 auto;}
+.target-photo{
+  width:170px;height:210px;border-radius:16px;
+  object-fit:cover;object-position:center top;
+  display:block;
+  box-shadow:0 8px 28px rgba(0,0,0,.14);
+  border:2px solid rgba(255,255,255,.7);
+}
+/* animated scan */
+.scan{position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,rgba(224,88,120,.7),transparent);top:0;animation:scan 2.5s linear infinite;border-radius:2px;}
+@keyframes scan{0%{top:0;opacity:0;}8%{opacity:1;}92%{opacity:1;}100%{top:100%;opacity:0;}}
+/* eye highlight box */
+.eye-highlight{position:absolute;border:2px solid rgba(224,88,120,.55);border-radius:5px;background:rgba(224,88,120,.07);animation:ep 2s ease-in-out infinite;pointer-events:none;}
+@keyframes ep{0%,100%{box-shadow:0 0 0 0 rgba(224,88,120,.4);}50%{box-shadow:0 0 0 6px rgba(224,88,120,0);}}
+.target-info{flex:1;}
+.target-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(197,183,234,.38);border:1px solid rgba(197,183,234,.55);color:var(--navy);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.pdot{width:6px;height:6px;border-radius:50%;background:var(--p2);animation:pd 1.5s ease-in-out infinite;}
+@keyframes pd{0%,100%{transform:scale(1);}50%{transform:scale(1.5);opacity:.6;}}
+.target-q{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--navy);line-height:1.35;margin-bottom:8px;}
+.target-sub{font-size:13px;color:var(--navy);opacity:.6;line-height:1.55;margin-bottom:14px;}
+.diff-row{display:flex;align-items:center;gap:6px;}
+.diff-label{font-size:11px;font-weight:700;color:var(--navy);opacity:.55;text-transform:uppercase;letter-spacing:.4px;margin-right:4px;}
+.ddot{width:9px;height:9px;border-radius:50%;background:rgba(180,170,210,.35);border:1.5px solid rgba(180,170,210,.4);}
+.ddot.on{background:var(--p1);border-color:var(--p2);box-shadow:0 0 5px rgba(224,88,120,.4);}
+
+/* OPTIONS LABEL */
+.opt-label{font-size:14px;font-weight:700;color:var(--navy);opacity:.75;text-align:center;}
+
+/* EYE GRID — 5 options */
+.eyes-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+@media(max-width:640px){.eyes-grid{grid-template-columns:repeat(3,1fr);}}
+
+.eye-card{
+  cursor:pointer;
+  background:rgba(255,255,255,.6);
+  border:2.5px solid transparent;
+  border-radius:16px;overflow:hidden;
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 4px 14px rgba(0,0,0,.07);
+  position:relative;
+}
+.eye-card:hover:not(.locked){transform:translateY(-5px) scale(1.03);border-color:rgba(196,181,232,.7);box-shadow:0 10px 28px rgba(100,80,180,.18);}
+
+/* EYE IMAGE — cropped to eye zone only via CSS */
+.eye-img-wrap{
+  width:100%;
+  aspect-ratio:2.2/1;
+  overflow:hidden;
+  position:relative;
+  background:#e8e0f0;
+}
+.eye-img-wrap img{
+  width:100%;
+  /* show only the eye area: top 25-55% of a portrait photo */
+  position:absolute;
+  top:-35%;
+  left:0;
+  width:100%;
+  height:auto;
+  transform:scale(1.4);
+  transform-origin:center 38%;
+  transition:transform .3s;
+  filter:brightness(.97);
+}
+.eye-card:hover:not(.locked) .eye-img-wrap img{transform:scale(1.5);transform-origin:center 38%;}
+
+.eye-num{position:absolute;top:5px;left:5px;background:rgba(43,50,96,.55);color:#fff;border-radius:7px;padding:2px 8px;font-size:11px;font-weight:700;backdrop-filter:blur(4px);z-index:2;}
+.eye-badge{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;opacity:0;transition:opacity .2s;z-index:2;}
+.eye-card.correct .eye-badge{opacity:1;background:var(--green);}
+.eye-card.wrong .eye-badge{opacity:1;background:var(--red);}
+.eye-card.reveal .eye-badge{opacity:1;background:var(--green);}
+
+.eye-lbl{padding:7px 4px;text-align:center;font-size:11px;font-weight:700;color:var(--navy);background:rgba(255,255,255,.5);border-top:1px solid rgba(255,255,255,.5);opacity:.7;}
+
+.eye-card.selected{border-color:var(--lav) !important;box-shadow:0 0 0 3px rgba(196,181,232,.3);}
+.eye-card.correct{border-color:var(--green)!important;box-shadow:0 0 0 4px rgba(82,196,138,.22),0 8px 24px rgba(82,196,138,.2)!important;animation:popc .45s ease;}
+.eye-card.wrong{border-color:var(--red)!important;box-shadow:0 0 0 4px rgba(224,88,120,.2)!important;animation:shakec .4s ease;opacity:.55;}
+.eye-card.reveal{border-color:var(--green)!important;box-shadow:0 0 0 4px rgba(82,196,138,.22)!important;}
+@keyframes popc{0%{transform:scale(1)}40%{transform:scale(1.07)}100%{transform:scale(1)}}
+@keyframes shakec{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* FEEDBACK */
+.feedback{border-radius:14px;padding:14px 18px;font-size:13.5px;line-height:1.6;display:none;animation:fbin .3s ease both;}
+@keyframes fbin{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.feedback.show{display:block;}
+.feedback.ok{background:rgba(82,196,138,.12);border:1.5px solid rgba(82,196,138,.4);color:#26795a;}
+.feedback.fail{background:rgba(224,88,120,.1);border:1.5px solid rgba(224,88,120,.35);color:#9e2d4a;}
+.fb-title{font-weight:800;font-size:15px;margin-bottom:5px;}
+
+/* BOTTOM BAR */
+.bbar{display:flex;gap:10px;align-items:center;}
+.btn{padding:13px 22px;border:none;border-radius:13px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .22s;display:flex;align-items:center;gap:7px;}
+.btn-main{background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;flex:1;box-shadow:0 6px 18px rgba(224,88,120,.28);}
+.btn-main:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 26px rgba(224,88,120,.36);}
+.btn-main:disabled{background:rgba(200,190,220,.4);color:rgba(43,51,96,.4);box-shadow:none;cursor:not-allowed;transform:none;}
+.btn-sec{background:rgba(255,255,255,.55);border:1.5px solid rgba(255,255,255,.7);color:var(--navy);opacity:.75;padding:13px 18px;}
+.btn-sec:hover{opacity:1;background:rgba(255,255,255,.75);}
+.hidden{display:none!important;}
+
+/* ── ML SECTION ── */
+#mlSection{display:none;flex-direction:column;gap:18px;}
+#mlSection.show{display:flex;}
+
+.ml-card{background:rgba(255,255,255,.65);border-radius:18px;padding:22px;border:1.5px solid rgba(255,255,255,.75);}
+
+/* Neural net canvas area */
+.nn-canvas-wrap{position:relative;height:220px;margin-bottom:20px;overflow:hidden;}
+canvas#nnCanvas{width:100%;height:100%;border-radius:12px;}
+
+.ml-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;}
+.ms{background:linear-gradient(135deg,rgba(246,168,124,.1),rgba(196,181,232,.12));border:1.5px solid rgba(196,181,232,.3);border-radius:14px;padding:16px;text-align:center;}
+.ms-val{font-size:28px;font-weight:800;color:var(--navy);}
+.ms-lbl{font-size:11px;color:var(--navy);opacity:.55;text-transform:uppercase;letter-spacing:.5px;margin-top:3px;font-weight:700;}
+
+.big-track{height:10px;background:rgba(255,255,255,.45);border-radius:6px;overflow:hidden;}
+.big-fill{height:100%;background:linear-gradient(90deg,var(--p1),var(--p2));border-radius:6px;transition:width .4s;box-shadow:0 0 10px rgba(224,88,120,.35);}
+.big-meta{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--navy);opacity:.65;margin-bottom:6px;}
+
+/* Example pairs grid */
+.pairs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-top:16px;max-height:360px;overflow-y:auto;}
+.pair-card{background:#fff;border-radius:12px;padding:9px;border:2px solid transparent;text-align:center;}
+.pair-card.ok{border-color:var(--green);}
+.pair-card.no{border-color:var(--red);opacity:.7;}
+.pair-face{width:100%;height:75px;object-fit:cover;object-position:center top;border-radius:8px;margin-bottom:4px;}
+.pair-eye-wrap{width:100%;aspect-ratio:2.2/1;overflow:hidden;border-radius:7px;position:relative;margin-bottom:5px;background:#e8e0f0;}
+.pair-eye-wrap img{position:absolute;top:-35%;left:0;width:100%;height:auto;transform:scale(1.4);transform-origin:center 38%;}
+.pair-tag{font-size:10px;padding:2px 8px;border-radius:10px;display:inline-block;font-weight:700;}
+.pair-tag.ok{background:var(--green);color:#fff;}
+.pair-tag.no{background:var(--red);color:#fff;}
+
+/* RESULT SCREEN */
+#resultScreen{display:none;flex-direction:column;align-items:center;justify-content:center;padding:44px 30px;text-align:center;gap:18px;min-height:480px;}
+#resultScreen.show{display:flex;animation:fbin .5s ease both;}
+.res-emoji{font-size:68px;line-height:1;}
+.res-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--navy);}
+.res-stars{font-size:34px;letter-spacing:4px;}
+.res-score{background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;border-radius:18px;padding:16px 36px;font-size:30px;font-weight:800;box-shadow:0 8px 26px rgba(224,88,120,.3);}
+.res-sub{font-size:15px;color:var(--navy);opacity:.65;max-width:380px;line-height:1.6;}
+.stats-row{display:flex;gap:12px;}
+.sbox{background:rgba(255,255,255,.55);border:1.5px solid var(--border);border-radius:14px;padding:14px 22px;text-align:center;min-width:110px;}
+.sv{font-size:26px;font-weight:800;color:var(--navy);}
+.sl{font-size:11px;color:var(--navy);opacity:.55;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+
+<div class="wrap">
+
+<!-- HEADER -->
+<header>
+  <div class="logo"><div class="logo-ic">◉</div>IrisID Lab</div>
+  <div class="tabs">
+    <button class="tab on" id="tabQuiz" onclick="switchTab('quiz')">🔬 Тест</button>
+    <button class="tab" id="tabML" onclick="switchTab('ml')">🤖 Обучение МО</button>
+  </div>
+  <div class="hstats">
+    <div class="hpill"><span class="dot dg"></span><span id="hCorrect">0</span></div>
+    <div class="hpill"><span class="dot dr"></span><span id="hWrong">0</span></div>
+    <div class="hpill">⭐ <span id="hScore">0</span></div>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="av">🧬</div>
+    <div class="av-name">Исследователь</div>
+    <ul class="nav">
+      <li><button class="nlink on" onclick="switchTab('quiz')">🔬 Лаборатория</button></li>
+      <li><button class="nlink" onclick="switchTab('ml')">🤖 Обучение МО</button></li>
+      <li><button class="nlink" onclick="switchTab('result')">📊 Результаты</button></li>
+    </ul>
+    <div class="progress-mini">
+      <div class="pm-label">Прогресс</div>
+      <div class="pm-track"><div class="pm-fill" id="sideProgress" style="width:0%"></div></div>
+      <div class="pm-count" id="sideCount">0 / 10 вопросов</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- QUIZ SECTION -->
+    <div id="quizSection">
+
+      <div class="card">
+        <div class="qhdr">
+          <div class="qtitle">🔍 Идентификация по радужке</div>
+          <div class="qbadge" id="qBadge">Вопрос 1 / 10</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="target-zone">
+          <div class="target-photo-wrap">
+            <img id="targetPhoto" class="target-photo" src="" alt="Знаменитость" onerror="this.src='https://picsum.photos/seed/x/200/250'">
+            <div class="scan"></div>
+            <div class="eye-highlight" style="top:30%;left:12%;width:76%;height:13%;"></div>
+          </div>
+          <div class="target-info">
+            <div class="target-tag"><span class="pdot"></span> Биометрия радужки</div>
+            <div class="target-q" id="targetQ">Найди глаза этого человека</div>
+            <div class="target-sub">Перед тобой фотография знаменитости. Выбери из 5 вариантов ниже, чьи глаза принадлежат именно этому человеку.</div>
+            <div class="diff-row">
+              <span class="diff-label">Сложность</span>
+              <div class="ddot" id="d1"></div>
+              <div class="ddot" id="d2"></div>
+              <div class="ddot" id="d3"></div>
+              <div class="ddot" id="d4"></div>
+              <div class="ddot" id="d5"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="opt-label" style="margin-bottom:14px;">Выбери правильный вариант глаз 👇</div>
+        <div class="eyes-grid" id="eyesGrid"></div>
+        <div class="feedback" id="feedback" style="margin-top:16px;">
+          <div class="fb-title" id="fbTitle"></div>
+          <div id="fbText"></div>
+        </div>
+        <div class="bbar" style="margin-top:16px;">
+          <button class="btn btn-sec" id="btnSkip" onclick="doSkip()">Пропустить</button>
+          <button class="btn btn-main" id="btnNext" onclick="doNext()" disabled>Следующий вопрос →</button>
+        </div>
+      </div>
+
+    </div><!-- /quizSection -->
+
+    <!-- ML SECTION -->
+    <div id="mlSection">
+
+      <div class="card">
+        <div class="qhdr">
+          <div class="qtitle">🧠 Как МО распознаёт по радужке</div>
+        </div>
+        <p style="font-size:13px;color:var(--navy);opacity:.65;margin-top:6px;line-height:1.6;">
+          Каждый твой правильный ответ — это обучающий пример для нейросети. Нажми «Запустить обучение» и увидишь, как сеть учится сопоставлять лицо с рисунком радужки.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="ml-card">
+          <div class="nn-canvas-wrap">
+            <canvas id="nnCanvas"></canvas>
+          </div>
+          <div class="ml-stats">
+            <div class="ms"><div class="ms-val" id="mlEpochs">0</div><div class="ms-lbl">Эпох</div></div>
+            <div class="ms"><div class="ms-val" id="mlAcc">0%</div><div class="ms-lbl">Точность</div></div>
+            <div class="ms"><div class="ms-val" id="mlLoss">1.00</div><div class="ms-lbl">Ошибка</div></div>
+          </div>
+          <div class="big-meta"><span>Прогресс обучения</span><span id="mlPct">0%</span></div>
+          <div class="big-track"><div class="big-fill" id="mlBar" style="width:0%"></div></div>
+        </div>
+        <div class="bbar" style="margin-top:16px;">
+          <button class="btn btn-sec" onclick="resetML()">↺ Сбросить</button>
+          <button class="btn btn-main" id="btnTrain" onclick="startML()">▶ Запустить обучение</button>
+        </div>
+      </div>
+
+      <div class="card" id="pairsCard" style="display:none;">
+        <div style="font-size:15px;font-weight:800;color:var(--navy);margin-bottom:6px;">📊 Обучающая выборка</div>
+        <p style="font-size:13px;color:var(--navy);opacity:.6;margin-bottom:2px;">Пары «лицо → радужка», которые запомнила сеть:</p>
+        <div class="pairs-grid" id="pairsGrid"></div>
+      </div>
+
+    </div><!-- /mlSection -->
+
+    <!-- RESULT SCREEN -->
+    <div id="resultScreen" class="card">
+      <div class="res-emoji" id="resEmoji">🏆</div>
+      <div class="res-title" id="resTitle">Отличный результат!</div>
+      <div class="res-stars" id="resStars">⭐⭐⭐</div>
+      <div class="res-score" id="resScore">8 / 10</div>
+      <div class="res-sub" id="resSub">Ты отлично распознаёшь людей по глазам!</div>
+      <div class="stats-row">
+        <div class="sbox"><div class="sv" id="rv1">0</div><div class="sl">Верно</div></div>
+        <div class="sbox"><div class="sv" id="rv2">0</div><div class="sl">Ошибок</div></div>
+        <div class="sbox"><div class="sv" id="rv3">0%</div><div class="sl">Точность</div></div>
+      </div>
+      <button class="btn btn-main" style="padding:15px 38px;font-size:16px;" onclick="restartAll()">🔄 Играть снова</button>
+    </div>
+
+  </main>
+</div><!-- /layout -->
+</div><!-- /wrap -->
+
+<script>
+// ─── CELEBRITY DATABASE ───────────────────────────────────────────────
+// face: full portrait photo URL
+// eyeSrc: same portrait — we CSS-crop to show only eye area
+// eyeOffset: how far down (%) the eye region sits in this photo
+// All images from Wikimedia Commons (public domain / CC)
+
+const PEOPLE = [
+  {
+    id:1, name:"Криштиану Роналду", hint:"Футболист, рекордсмен по голам", diff:2,
+    face:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/400px-Cristiano_Ronaldo_2018.jpg",
+    eyeSrc:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cristiano_Ronaldo_2018.jpg/400px-Cristiano_Ronaldo_2018.jpg",
+    eyeOff:28
+  },
+  {
+    id:2, name:"Лионель Месси", hint:"Футболист, 8 «Золотых мячей»", diff:2,
+    face:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Messi_vs_Nigeria_2018.jpg/400px-Messi_vs_Nigeria_2018.jpg",
+    eyeSrc:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Messi_vs_Nigeria_2018.jpg/400px-Messi_vs_Nigeria_2018.jpg",
+    eyeOff:30
+  },
+  {
+    id:3, name:"Билли Айлиш", hint:"Певица, Grammy-лауреат", diff:2,
+    face:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Billie_Eilish_at_the_2019_iHeartRadio_Music_Awards.png/400px-Billie_Eilish_at_the_2019_iHeartRadio_Music_Awards.png",
+    eyeSrc:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Billie_Eilish_at_the_2019_iHeartRadio_Music_Awards.png/400px-Billie_Eilish_at_the_2019_iHeartRadio_Music_Awards.png",
+    eyeOff:30
+  },
+  {
+    id:4, name:"Эд Ширан", hint:"Певец, Shape of You", diff:2,
+    face:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Ed_Sheeran_-_Multiply_Tour%2C_Bangalore_%28Cropped%29.jpg/400px-Ed_Sheeran_-_Multiply_Tour%2C_Bangalore_%28Cropped%29.jpg",
+    eyeSrc:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Ed_Sheeran_-_Multiply_Tour%2C_Bangalore_%28Cropped%29.jpg/400px-Ed_Sheeran_-_Multiply_Tour%2C_Bangalore_%28Cropped%29.jpg",
+    eyeOff:29
+  },
+  {
+    id:5, name:"Тейлор Свифт", hint:"Певица, 14 Grammy", diff:2,
+    face:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/191125_Taylor_Swift_at_the_2019_American_Music_Awards_%28cropped%29.png/400px-191125_Taylor_Swift_at_the_2019_American_Music_Awards_%28cropped%29.png",
+    eyeSrc:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/191125_Taylor_Swift_at_the_2019_American_Music_Awards_%28cropped%29.png/400px-191125_Taylor_Swift_at_the_2019_American_Music_Awards_%28cropped%29.png",
+    eyeOff:29
+  },
+  {
+    id:6, name:"BTS — Чонгук", hint:"K-pop, Golden Maknae", diff:3,
+    face:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Jungkook_2023_Golden_promotions.png/400px-Jungkook_2023_Golden_promotions.png",
+    eyeSrc:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Jungkook_2023_Golden_promotions.png/400px-Jungkook_2023_Golden_promotions.png",
+    eyeOff:30
+  },
+  {
+    id:7, name:"Ариана Гранде", hint:"Певица, Thank U Next", diff:2,
+    face:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Ariana_Grande_-_2019_by_Glenn_Francis.jpg/400px-Ariana_Grande_-_2019_by_Glenn_Francis.jpg",
+    eyeSrc:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Ariana_Grande_-_2019_by_Glenn_Francis.jpg/400px-Ariana_Grande_-_2019_by_Glenn_Francis.jpg",
+    eyeOff:28
+  },
+  {
+    id:8, name:"Неймар", hint:"Футболист, ПСЖ / Аль-Хиляль", diff:3,
+    face:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Neymar_2019.jpg/400px-Neymar_2019.jpg",
+    eyeSrc:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Neymar_2019.jpg/400px-Neymar_2019.jpg",
+    eyeOff:30
+  },
+  {
+    id:9, name:"Эмма Уотсон", hint:"Актриса, Гермиона Грейнджер", diff:2,
+    face:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Emma_Watson_2013.jpg/400px-Emma_Watson_2013.jpg",
+    eyeSrc:"https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Emma_Watson_2013.jpg/400px-Emma_Watson_2013.jpg",
+    eyeOff:28
+  },
+  {
+    id:10, name:"Леброн Джеймс", hint:"Баскетболист, 4× чемпион НБА", diff:2,
+    face:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/LeBron_James_crop.jpg/400px-LeBron_James_crop.jpg",
+    eyeSrc:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/LeBron_James_crop.jpg/400px-LeBron_James_crop.jpg",
+    eyeOff:28
+  }
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────
+const TOTAL = 10;
+let qIdx = 0, correct = 0, wrong = 0, score = 0;
+let answered = false;
+let history = []; // {person, isCorrect}
+let shuffledQ = [];
+let optOrder = [];
+let mlRunning = false, mlTimer = null;
+
+function shuffle(a){ return [...a].sort(()=>Math.random()-.5); }
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+function init(){
+  shuffledQ = shuffle(PEOPLE).slice(0, TOTAL);
+  qIdx=0; correct=0; wrong=0; score=0; answered=false; history=[];
+  updateHdr();
+  loadQ();
+}
+
+function loadQ(){
+  if(qIdx >= TOTAL){ showResult(); return; }
+  answered = false;
+  const p = shuffledQ[qIdx];
+
+  // progress
+  const pct = (qIdx/TOTAL)*100;
+  document.getElementById('sideProgress').style.width = pct+'%';
+  document.getElementById('sideCount').textContent = qIdx+' / '+TOTAL+' вопросов';
+  document.getElementById('qBadge').textContent = 'Вопрос '+(qIdx+1)+' / '+TOTAL;
+
+  // target photo
+  const img = document.getElementById('targetPhoto');
+  img.src = p.face;
+
+  // difficulty dots
+  for(let i=1;i<=5;i++) document.getElementById('d'+i).className='ddot'+(i<=p.diff?' on':'');
+
+  // build 5 options: 1 correct + 4 wrong
+  const others = PEOPLE.filter(x=>x.id!==p.id);
+  const wrong4 = shuffle(others).slice(0,4);
+  const opts = shuffle([{...p, isCorrect:true}, ...wrong4.map(o=>({...o, isCorrect:false}))]);
+  optOrder = opts;
+
+  const grid = document.getElementById('eyesGrid');
+  grid.innerHTML='';
+  opts.forEach((opt,i)=>{
+    const card = document.createElement('div');
+    card.className='eye-card';
+    card.dataset.i=i;
+    // CSS-crop: show only eye region
+    const yOff = opt.eyeOff || 29;
+    card.innerHTML=`
+      <span class="eye-num">${i+1}</span>
+      <div class="eye-img-wrap">
+        <img src="${opt.eyeSrc}" alt="Eye ${i+1}"
+          style="top:-${yOff}%;transform:scale(1.45);transform-origin:center ${yOff+8}%;"
+          onerror="this.parentElement.style.background='#d0c8e0'">
+      </div>
+      <div class="eye-badge">${opt.isCorrect?'✓':'✗'}</div>
+      <div class="eye-lbl">Вариант ${i+1}</div>
+    `;
+    card.onclick=()=>pick(i,card,opt.isCorrect, p);
+    grid.appendChild(card);
+  });
+
+  // reset UI
+  document.getElementById('feedback').className='feedback';
+  document.getElementById('btnNext').disabled=true;
+  document.getElementById('btnSkip').style.display='';
+}
+
+function pick(i, card, isCorrect, person){
+  if(answered) return;
+  answered=true;
+  document.querySelectorAll('.eye-card').forEach(c=>c.classList.add('locked'));
+
+  const fb=document.getElementById('feedback');
+  if(isCorrect){
+    card.classList.add('correct');
+    correct++; score+=100;
+    fb.className='feedback ok show';
+    document.getElementById('fbTitle').textContent='✅ Правильно!';
+    document.getElementById('fbText').innerHTML=`Это действительно глаза <strong>${person.name}</strong> — ${person.hint}.<br><small>🔬 Рисунок радужки уникален, как отпечаток пальца — 266 измеримых характеристик.</small>`;
+    history.push({person, isCorrect:true});
+  } else {
+    card.classList.add('wrong');
+    wrong++;
+    // reveal correct
+    document.querySelectorAll('.eye-card').forEach((c,ci)=>{ if(optOrder[ci].isCorrect) c.classList.add('reveal'); });
+    fb.className='feedback fail show';
+    document.getElementById('fbTitle').textContent='❌ Не угадал!';
+    document.getElementById('fbText').innerHTML=`Это были глаза другого человека. Зелёная рамка — правильный ответ (<strong>${person.name}</strong>).<br><small>💡 Попробуй замечать форму брови, межбровное расстояние и разрез глаз.</small>`;
+    history.push({person, isCorrect:false});
+  }
+
+  updateHdr();
+  document.getElementById('btnNext').disabled=false;
+  document.getElementById('btnSkip').style.display='none';
+}
+
+function doNext(){ qIdx++; loadQ(); }
+function doSkip(){ history.push({person:shuffledQ[qIdx],isCorrect:false}); wrong++; updateHdr(); qIdx++; loadQ(); }
+function updateHdr(){
+  document.getElementById('hCorrect').textContent=correct;
+  document.getElementById('hWrong').textContent=wrong;
+  document.getElementById('hScore').textContent=score;
+}
+
+// ─── RESULT ───────────────────────────────────────────────────────────
+function showResult(){
+  switchTab('result');
+  const acc=Math.round((correct/TOTAL)*100);
+  document.getElementById('rv1').textContent=correct;
+  document.getElementById('rv2').textContent=wrong;
+  document.getElementById('rv3').textContent=acc+'%';
+  document.getElementById('resScore').textContent=correct+' / '+TOTAL;
+  const s = acc>=80?'⭐⭐⭐':acc>=55?'⭐⭐':'⭐';
+  document.getElementById('resStars').textContent=s;
+  let em,ti,su;
+  if(acc>=80){em='🏆';ti='Мастер биометрии!';su='Твои навыки на уровне систем Face-ID. Впечатляет!';}
+  else if(acc>=55){em='👁';ti='Хороший результат!';su='Ты умеешь замечать детали. Тренируйся — и станешь экспертом.';}
+  else{em='🔍';ti='Нужна практика!';su='Глаза сложно читать с первого раза. Попробуй снова!';}
+  document.getElementById('resEmoji').textContent=em;
+  document.getElementById('resTitle').textContent=ti;
+  document.getElementById('resSub').textContent=su;
+  document.getElementById('sideProgress').style.width='100%';
+  document.getElementById('sideCount').textContent=TOTAL+' / '+TOTAL+' вопросов';
+}
+
+function restartAll(){ switchTab('quiz'); init(); }
+
+// ─── TAB SWITCH ───────────────────────────────────────────────────────
+function switchTab(t){
+  document.getElementById('quizSection').style.display='none';
+  document.getElementById('mlSection').className='card';
+  document.getElementById('mlSection').style.display='none';
+  document.getElementById('resultScreen').className='card';
+  document.getElementById('resultScreen').style.display='none';
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.nlink').forEach(b=>b.classList.remove('on'));
+
+  if(t==='quiz'){
+    document.getElementById('quizSection').style.display='';
+    document.getElementById('tabQuiz').classList.add('on');
+  } else if(t==='ml'){
+    const ms=document.getElementById('mlSection');
+    ms.style.display='flex';ms.style.flexDirection='column';ms.style.gap='18px';
+    document.getElementById('tabML').classList.add('on');
+    initCanvas();
+  } else if(t==='result'){
+    const rs=document.getElementById('resultScreen');
+    rs.style.display='flex';rs.className='card show';
+  }
+}
+
+// ─── NEURAL NET CANVAS ────────────────────────────────────────────────
+let animFrame=null, nnState={active:[]};
+
+function initCanvas(){
+  const c=document.getElementById('nnCanvas');
+  const wrap=c.parentElement;
+  c.width=wrap.clientWidth||700;
+  c.height=220;
+  drawNN(c, nnState.active||[]);
+}
+
+const LAYERS=[[3,140],[4,280],[4,420],[2,560]]; // [neurons, x]
+// y positions per layer
+const YS=[[60,110,160],[45,80,130,175],[45,80,130,175],[90,130]];
+
+function layerNeurons(li){ return YS[li].length; }
+
+function drawNN(c, actives){
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  // connections
+  for(let li=0;li<LAYERS.length-1;li++){
+    const nx=LAYERS[li][1], x2=LAYERS[li+1][1];
+    for(let a=0;a<YS[li].length;a++){
+      for(let b=0;b<YS[li+1].length;b++){
+        const key=`${li}_${a}_${b}`;
+        const isActive=actives.includes(key);
+        ctx.beginPath();
+        ctx.moveTo(nx,YS[li][a]);
+        ctx.lineTo(x2,YS[li+1][b]);
+        ctx.strokeStyle=isActive?'rgba(224,88,120,.7)':'rgba(196,181,232,.25)';
+        ctx.lineWidth=isActive?2:1;
+        ctx.stroke();
+      }
+    }
+  }
+  // nodes
+  const labels=[['Лицо','Глаз','Паттерн'],['H1','H2','H3','H4'],['H5','H6','H7','H8'],['Совп.','Нет']];
+  LAYERS.forEach((layer,li)=>{
+    YS[li].forEach((y,ni)=>{
+      const nkey=`n_${li}_${ni}`;
+      const isActive=actives.includes(nkey);
+      ctx.beginPath();
+      ctx.arc(layer[1],y,isActive?20:16,0,Math.PI*2);
+      if(isActive){
+        const g=ctx.createRadialGradient(layer[1],y,2,layer[1],y,20);
+        g.addColorStop(0,'#f0a8c0');g.addColorStop(1,'#c06090');
+        ctx.fillStyle=g;
+      } else {
+        const g=ctx.createRadialGradient(layer[1],y,2,layer[1],y,16);
+        g.addColorStop(0,'#d8c8ec');g.addColorStop(1,'#b8a0d8');
+        ctx.fillStyle=g;
+      }
+      ctx.fill();
+      if(isActive){ ctx.strokeStyle='rgba(224,88,120,.6)';ctx.lineWidth=2;ctx.stroke(); }
+      ctx.fillStyle=isActive?'#fff':'rgba(43,50,96,.75)';
+      ctx.font=`bold ${isActive?10:9}px Nunito,sans-serif`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(labels[li][ni]||'',layer[1],y);
+      if(isActive){
+        ctx.beginPath();ctx.arc(layer[1],y,26,0,Math.PI*2);
+        ctx.strokeStyle='rgba(224,88,120,.2)';ctx.lineWidth=4;ctx.stroke();
+      }
+    });
+  });
+  // layer labels
+  const llabels=['Вход','Скрытый 1','Скрытый 2','Выход'];
+  LAYERS.forEach((layer,li)=>{
+    ctx.fillStyle='rgba(43,50,96,.4)';
+    ctx.font='bold 10px Nunito,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(llabels[li],layer[1],205);
+  });
+}
+
+// ─── ML TRAINING SIMULATION ───────────────────────────────────────────
+function startML(){
+  if(mlRunning) return;
+  mlRunning=true;
+  document.getElementById('btnTrain').disabled=true;
+
+  const maxE=18;
+  const baseAcc = history.length>0 ? history.filter(h=>h.isCorrect).length/history.length : 0.6;
+  let e=0;
+  const c=document.getElementById('nnCanvas');
+
+  mlTimer=setInterval(()=>{
+    e++;
+    // random active connections
+    const actives=[];
+    LAYERS.forEach((layer,li)=>{
+      if(li<LAYERS.length-1){
+        for(let a=0;a<YS[li].length;a++){
+          for(let b=0;b<YS[li+1].length;b++){
+            if(Math.random()<.35) actives.push(`${li}_${a}_${b}`);
+          }
+        }
+      }
+      YS[li].forEach((_,ni)=>{ if(Math.random()<.5) actives.push(`n_${li}_${ni}`); });
+    });
+    nnState.active=actives;
+    drawNN(c, actives);
+
+    const acc=Math.min(97,Math.round((e/maxE)*100*baseAcc + Math.random()*4 + e*0.5));
+    const loss=Math.max(0.03,(1-(e/maxE)*0.9).toFixed(3));
+    const pct=Math.round((e/maxE)*100);
+
+    document.getElementById('mlEpochs').textContent=e;
+    document.getElementById('mlAcc').textContent=acc+'%';
+    document.getElementById('mlLoss').textContent=loss;
+    document.getElementById('mlBar').style.width=pct+'%';
+    document.getElementById('mlPct').textContent=pct+'%';
+
+    if(e>=maxE){
+      clearInterval(mlTimer); mlRunning=false;
+      nnState.active=[];
+      // light up output
+      const finalAct=[`n_3_0`];
+      drawNN(c,finalAct);
+      showPairs();
+    }
+  },350);
+}
+
+function showPairs(){
+  const card=document.getElementById('pairsCard');
+  card.style.display='';
+  const grid=document.getElementById('pairsGrid');
+  grid.innerHTML='';
+  const items=history.length>0?history:shuffledQ.slice(0,4).map(p=>({person:p,isCorrect:Math.random()>.4}));
+  items.forEach(h=>{
+    const div=document.createElement('div');
+    div.className='pair-card '+(h.isCorrect?'ok':'no');
+    const yOff=h.person.eyeOff||29;
+    div.innerHTML=`
+      <img class="pair-face" src="${h.person.face}" alt="Face" onerror="this.style.background='#ddd'">
+      <div class="pair-eye-wrap">
+        <img src="${h.person.eyeSrc}" alt="Eye"
+          style="top:-${yOff}%;transform:scale(1.45);transform-origin:center ${yOff+8}%;">
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--navy);opacity:.7;margin-bottom:3px;">${h.person.name.split(' ')[0]}</div>
+      <span class="pair-tag ${h.isCorrect?'ok':'no'}">${h.isCorrect?'✓ Совпадение':'✗ Не совпадает'}</span>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function resetML(){
+  if(mlTimer){ clearInterval(mlTimer); mlRunning=false; }
+  nnState.active=[];
+  const c=document.getElementById('nnCanvas'); if(c) drawNN(c,[]);
+  ['mlEpochs','mlAcc','mlLoss'].forEach((id,i)=>document.getElementById(id).textContent=['0','0%','1.00'][i]);
+  document.getElementById('mlBar').style.width='0%';
+  document.getElementById('mlPct').textContent='0%';
+  document.getElementById('btnTrain').disabled=false;
+  document.getElementById('pairsCard').style.display='none';
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────
+window.onload=()=>{ switchTab('quiz'); init(); };
+window.addEventListener('resize',()=>{ const c=document.getElementById('nnCanvas'); if(c&&c.parentElement){ c.width=c.parentElement.clientWidth; drawNN(c,nnState.active||[]); } });
+</script>
+</body>
+</html>
